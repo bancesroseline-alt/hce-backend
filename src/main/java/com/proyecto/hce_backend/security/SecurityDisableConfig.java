@@ -28,6 +28,7 @@ public class SecurityDisableConfig {
                         .requestMatchers("/api/atenciones/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
                         .requestMatchers("/api/historias-clinicas/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
                         .requestMatchers("/api/citas/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
+                        .requestMatchers("/api/dashboard/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
 
                         .anyRequest().authenticated()
                 )
