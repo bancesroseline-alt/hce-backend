@@ -22,13 +22,14 @@ public class SecurityDisableConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/api/dashboard/**").permitAll()
 
                         .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
                         .requestMatchers("/api/pacientes/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
                         .requestMatchers("/api/atenciones/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
                         .requestMatchers("/api/historias-clinicas/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
                         .requestMatchers("/api/citas/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
-                        .requestMatchers("/api/dashboard/**").authenticated()
+                        
 
                         .anyRequest().authenticated()
                 )
