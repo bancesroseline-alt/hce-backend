@@ -26,7 +26,7 @@ public class SecurityDisableConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         
                         .requestMatchers("/api/dashboard/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
-                        .requestMatchers("/api/usuarios/**").hasRole("ADMIN", "MEDICO", "ENFERMERO")
+                        .requestMatchers("/api/usuarios/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
                         .requestMatchers("/api/pacientes/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
                         .requestMatchers("/api/atenciones/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
                         .requestMatchers("/api/historias-clinicas/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
