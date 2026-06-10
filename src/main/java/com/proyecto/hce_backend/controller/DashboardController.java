@@ -1,6 +1,7 @@
 package com.proyecto.hce_backend.controller;
 
 import com.proyecto.hce_backend.model.Cita;
+import com.proyecto.hce_backend.model.EstadoCita;
 import com.proyecto.hce_backend.repository.AtencionMedicaRepository;
 import com.proyecto.hce_backend.repository.CitaRepository;
 import com.proyecto.hce_backend.repository.PacienteRepository;
@@ -28,19 +29,21 @@ public class DashboardController {
 
     @GetMapping("/medico/{id}")
     public Map<String, Object> dashboardMedico(@PathVariable Long id) {
+
         Map<String, Object> response = new HashMap<>();
 
         LocalDate hoy = LocalDate.now();
 
-        List<Cita> citasDelDia = citaRepository.findByFecha(hoy);
+        List<Cita> citasProgramadasHoy =
+                citaRepository.findByFechaAndEstado(hoy, EstadoCita.PROGRAMADA);
 
         response.put("totalPacientes", pacienteRepository.count());
-        response.put("citasHoy", citasDelDia.size());
+        response.put("citasHoy", citasProgramadasHoy.size());
         response.put("totalCitasMedico", citaRepository.findByMedicoId(id).size());
         response.put("totalAtenciones", atencionMedicaRepository.count());
         response.put("porcentajeInasistencia", 0);
 
-        response.put("citasDelDia", citasDelDia);
+        response.put("citasDelDia", citasProgramadasHoy);
 
         return response;
     }
