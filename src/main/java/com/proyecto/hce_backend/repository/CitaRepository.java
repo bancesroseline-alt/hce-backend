@@ -20,4 +20,10 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
 
     boolean existsByMedicoIdAndFechaAndHora(Long medicoId, LocalDate fecha, LocalTime hora);
     long countByFecha(LocalDate fecha);
+
+   
+    List<Cita> findByFecha(LocalDate fecha);
+
+    
+    List<Cita> findByFechaAndEstado(LocalDate fecha, EstadoCita estado);
 }
