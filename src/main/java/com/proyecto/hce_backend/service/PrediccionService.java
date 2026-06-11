@@ -1,5 +1,6 @@
 package com.proyecto.hce_backend.service;
 
+import com.proyecto.hce_backend.dto.FastApiResponseDTO;
 import com.proyecto.hce_backend.dto.PrediccionRequestDTO;
 import com.proyecto.hce_backend.dto.PrediccionResponseDTO;
 import com.proyecto.hce_backend.model.Cita;
@@ -9,96 +10,137 @@ import com.proyecto.hce_backend.repository.CitaRepository;
 import com.proyecto.hce_backend.repository.PacienteRepository;
 import com.proyecto.hce_backend.repository.PrediccionInasistenciaRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class PrediccionService {
 
-    final PacienteRepository pacienteRepository;
-    final CitaRepository citaRepository;
-    final PrediccionInasistenciaRepository prediccionRepository;
+```
+private final RestTemplate restTemplate;
+private final PacienteRepository pacienteRepository;
+private final CitaRepository citaRepository;
+private final PrediccionInasistenciaRepository prediccionRepository;
 
-    public PrediccionService(PacienteRepository pacienteRepository,
-                             CitaRepository citaRepository,
-                             PrediccionInasistenciaRepository prediccionRepository) {
-        this.pacienteRepository = pacienteRepository;
-        this.citaRepository = citaRepository;
-        this.prediccionRepository = prediccionRepository;
+public PrediccionService(
+        PacienteRepository pacienteRepository,
+        CitaRepository citaRepository,
+        PrediccionInasistenciaRepository prediccionRepository,
+        RestTemplate restTemplate) {
+
+    this.pacienteRepository = pacienteRepository;
+    this.citaRepository = citaRepository;
+    this.prediccionRepository = prediccionRepository;
+    this.restTemplate = restTemplate;
+}
+
+public PrediccionResponseDTO predecirInasistencia(PrediccionRequestDTO dto) {
+
+    Paciente paciente = pacienteRepository.findById(dto.getPacienteId())
+            .orElseThrow(() -> new RuntimeException("Paciente no encontrado"));
+
+    Cita cita = null;
+
+    if (dto.getCitaId() != null) {
+        cita = citaRepository.findById(dto.getCitaId())
+                .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
     }
 
-    public PrediccionResponseDTO predecirInasistencia(PrediccionRequestDTO dto) {
+    Map<String, Object> request = new HashMap<>();
 
-        Paciente paciente = pacienteRepository.findById(dto.getPacienteId())
-                .orElseThrow(() -> new RuntimeException("Paciente no encontrado"));
+    request.put("edad", dto.getEdad());
 
-        Cita cita = null;
+    request.put(
+            "sexo",
+            paciente.getSexo()
+    );
 
-        if (dto.getCitaId() != null) {
-            cita = citaRepository.findById(dto.getCitaId())
-                    .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
-        }
+    request.put(
+            "tipo_cita",
+            dto.getTipoCita()
+    );
 
-        double probabilidad = 0.10;
+    request.put(
+            "especialidad",
+            dto.getEspecialidad()
+    );
 
-        if (dto.getCantidadInasistenciasPrevias() != null) {
-            probabilidad += dto.getCantidadInasistenciasPrevias() * 0.20;
-        }
+    request.put(
+            "dia_semana",
+            cita != null
+                    ? cita.getFecha().getDayOfWeek().toString()
+                    : "MONDAY"
+    );
 
-        if (dto.getCantidadCitasPrevias() != null && dto.getCantidadCitasPrevias() > 5) {
-            probabilidad += 0.10;
-        }
+    request.put(
+            "hora",
+            cita != null
+                    ? cita.getHora().getHour()
+                    : 10
+    );
 
-        if (dto.getEdad() != null && dto.getEdad() > 65) {
-            probabilidad += 0.10;
-        }
+    request.put(
+            "antecedentes_inasistencias",
+            dto.getCantidadInasistenciasPrevias()
+    );
 
-        if ("PREVENTIVA".equalsIgnoreCase(dto.getTipoCita())) {
-            probabilidad += 0.05;
-        }
+    request.put(
+            "cantidad_citas_previas",
+            dto.getCantidadCitasPrevias()
+    );
 
-        if (probabilidad > 1.0) {
-            probabilidad = 1.0;
-        }
+    FastApiResponseDTO respuestaIA =
+            restTemplate.postForObject(
+                    "http://127.0.0.1:8000/predict",
+                    request,
+                    FastApiResponseDTO.class
+            );
 
-        String nivelRiesgo;
-        String recomendacion;
+    double probabilidad = respuestaIA.getProbabilidad();
 
-        if (probabilidad >= 0.70) {
-            nivelRiesgo = "ALTO";
-            recomendacion = "Se recomienda contactar al paciente y considerar reprogramación preventiva.";
-        } else if (probabilidad >= 0.40) {
-            nivelRiesgo = "MEDIO";
-            recomendacion = "Se recomienda enviar recordatorio antes de la cita.";
-        } else {
-            nivelRiesgo = "BAJO";
-            recomendacion = "No se requiere recomendación de reprogramación.";
-        }
+    String nivelRiesgo;
+    String recomendacion;
 
-        PrediccionInasistencia prediccion = new PrediccionInasistencia();
-        prediccion.setPaciente(paciente);
-        prediccion.setCita(cita);
-        prediccion.setProbabilidadInasistencia(probabilidad);
-        prediccion.setNivelRiesgo(nivelRiesgo);
-        prediccion.setRecomendacion(recomendacion);
-        prediccion.setFechaPrediccion(LocalDateTime.now());
-
-        prediccionRepository.save(prediccion);
-
-        return new PrediccionResponseDTO(
-                paciente.getId(),
-                probabilidad,
-                nivelRiesgo,
-                recomendacion
-        );
+    if (probabilidad >= 0.70) {
+        nivelRiesgo = "ALTO";
+        recomendacion = "Se recomienda contactar al paciente y considerar reprogramación preventiva.";
+    } else if (probabilidad >= 0.40) {
+        nivelRiesgo = "MEDIO";
+        recomendacion = "Se recomienda enviar recordatorio antes de la cita.";
+    } else {
+        nivelRiesgo = "BAJO";
+        recomendacion = "No se requiere recomendación de reprogramación.";
     }
 
-    public List<PrediccionInasistencia> listarPorPaciente(Long pacienteId) {
-        return prediccionRepository.findByPacienteId(pacienteId);
-    }
+    PrediccionInasistencia prediccion = new PrediccionInasistencia();
+    prediccion.setPaciente(paciente);
+    prediccion.setCita(cita);
+    prediccion.setProbabilidadInasistencia(probabilidad);
+    prediccion.setNivelRiesgo(nivelRiesgo);
+    prediccion.setRecomendacion(recomendacion);
+    prediccion.setFechaPrediccion(LocalDateTime.now());
 
-    public List<PrediccionInasistencia> listarAlertas() {
-        return prediccionRepository.findByNivelRiesgo("ALTO");
-    }
+    prediccionRepository.save(prediccion);
+
+    return new PrediccionResponseDTO(
+            paciente.getId(),
+            probabilidad,
+            nivelRiesgo,
+            recomendacion
+    );
+}
+
+public List<PrediccionInasistencia> listarPorPaciente(Long pacienteId) {
+    return prediccionRepository.findByPacienteId(pacienteId);
+}
+
+public List<PrediccionInasistencia> listarAlertas() {
+    return prediccionRepository.findByNivelRiesgo("ALTO");
+}
+```
+
 }
