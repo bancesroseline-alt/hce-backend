@@ -20,7 +20,6 @@ import java.util.Map;
 @Service
 public class PrediccionService {
 
-```
 private final RestTemplate restTemplate;
 private final PacienteRepository pacienteRepository;
 private final CitaRepository citaRepository;
@@ -141,6 +140,5 @@ public List<PrediccionInasistencia> listarPorPaciente(Long pacienteId) {
 public List<PrediccionInasistencia> listarAlertas() {
     return prediccionRepository.findByNivelRiesgo("ALTO");
 }
-```
 
 }
