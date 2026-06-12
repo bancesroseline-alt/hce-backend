@@ -11,6 +11,7 @@ import com.proyecto.hce_backend.repository.PacienteRepository;
 import com.proyecto.hce_backend.repository.PrediccionInasistenciaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -24,6 +25,9 @@ private final RestTemplate restTemplate;
 private final PacienteRepository pacienteRepository;
 private final CitaRepository citaRepository;
 private final PrediccionInasistenciaRepository prediccionRepository;
+
+@Value("${ml.api.url}")
+private String mlApiUrl;
 
 public PrediccionService(
         PacienteRepository pacienteRepository,
@@ -94,7 +98,7 @@ public PrediccionResponseDTO predecirInasistencia(PrediccionRequestDTO dto) {
 
     FastApiResponseDTO respuestaIA =
         restTemplate.postForObject(
-                "https://ml-api-inasistencias.onrender.com/predict",
+                mlApiUrl,
                 request,
                 FastApiResponseDTO.class
         );
