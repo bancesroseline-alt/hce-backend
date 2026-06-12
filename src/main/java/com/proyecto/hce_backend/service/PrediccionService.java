@@ -93,11 +93,11 @@ public PrediccionResponseDTO predecirInasistencia(PrediccionRequestDTO dto) {
     );
 
     FastApiResponseDTO respuestaIA =
-            restTemplate.postForObject(
-                    "http://127.0.0.1:8000/predict",
-                    request,
-                    FastApiResponseDTO.class
-            );
+        restTemplate.postForObject(
+                "https://ml-api-inasistencias.onrender.com/predict",
+                request,
+                FastApiResponseDTO.class
+        );
 
     double probabilidad = respuestaIA.getProbabilidad();
 
