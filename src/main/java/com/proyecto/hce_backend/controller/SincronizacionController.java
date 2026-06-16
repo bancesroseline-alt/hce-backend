@@ -4,6 +4,7 @@ import com.proyecto.hce_backend.dto.SincronizacionCitaRequestDTO;
 import com.proyecto.hce_backend.dto.SincronizacionRequestDTO;
 import com.proyecto.hce_backend.model.AtencionMedica;
 import com.proyecto.hce_backend.model.Cita;
+import com.proyecto.hce_backend.model.Paciente;
 import com.proyecto.hce_backend.service.SincronizacionCitaService;
 import com.proyecto.hce_backend.service.SincronizacionService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -32,5 +33,10 @@ public class SincronizacionController {
     @PostMapping("/citas")
     public Cita sincronizarCita(@RequestBody SincronizacionCitaRequestDTO dto) {
         return sincronizacionCitaService.sincronizarCita(dto);
+    }
+
+    @PostMapping("/pacientes")
+    public Paciente sincronizarPaciente(@RequestBody Paciente paciente) {
+        return sincronizacionService.sincronizarPaciente(paciente);
     }
 }

@@ -64,9 +64,15 @@ public class SincronizacionService {
 
         atencion.setTipoAtencion(TipoAtencion.valueOf(dto.getTipoAtencion()));
         atencion.setMotivoConsulta(dto.getMotivoConsulta());
+        atencion.setPresionArterial(dto.getPresionArterial());
+        atencion.setTemperatura(dto.getTemperatura());
+        atencion.setSaturacion(dto.getSaturacion());
+        atencion.setTalla(dto.getTalla());
+        atencion.setPeso(dto.getPeso());
         atencion.setDiagnostico(dto.getDiagnostico());
         atencion.setTratamientoIndicado(dto.getTratamientoIndicado());
         atencion.setObservaciones(dto.getObservaciones());
+        atencion.setMedicamentos(dto.getMedicamentos());
         atencion.setEstado(EstadoAtencion.valueOf(dto.getEstado()));
 
         atencion.setUuidLocal(dto.getUuidLocal());
@@ -80,5 +86,41 @@ public class SincronizacionService {
         guardada.setHashBlockchain(hash);
 
         return atencionMedicaRepository.save(guardada);
+    }
+
+    public Paciente sincronizarPaciente(Paciente pacienteOffline) {
+
+        if (pacienteOffline.getUuidLocal() != null) {
+            var existente = pacienteRepository.findByUuidLocal(pacienteOffline.getUuidLocal());
+
+            if (existente.isPresent()) {
+                return existente.get();
+            }
+        }
+
+        if (pacienteOffline.getNumeroDocumento() != null) {
+            var existentePorDocumento = pacienteRepository.findByNumeroDocumento(pacienteOffline.getNumeroDocumento());
+
+            if (existentePorDocumento.isPresent()) {
+                Paciente existente = existentePorDocumento.get();
+
+                if (existente.getUuidLocal() == null) {
+                    existente.setUuidLocal(pacienteOffline.getUuidLocal());
+                    existente.setFechaSincronizacion(LocalDateTime.now());
+                    existente.setSincronizado(true);
+                    return pacienteRepository.save(existente);
+                }
+
+                return existente;
+            }
+        }
+
+        pacienteOffline.setId(null);
+        pacienteOffline.setEstado(pacienteOffline.getEstado() != null ? pacienteOffline.getEstado() : true);
+        pacienteOffline.setOrigenRegistro("INDEXEDDB");
+        pacienteOffline.setSincronizado(true);
+        pacienteOffline.setFechaSincronizacion(LocalDateTime.now());
+
+        return pacienteRepository.save(pacienteOffline);
     }
 }

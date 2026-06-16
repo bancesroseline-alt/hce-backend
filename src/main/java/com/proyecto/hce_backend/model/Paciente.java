@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Period;
 
 @Entity
@@ -60,4 +61,15 @@ public class Paciente {
 
     @Column(nullable = false)
     private Boolean estado;
+
+    @Column(nullable = false)
+    private Boolean sincronizado = true;
+
+    private LocalDateTime fechaSincronizacion;
+
+    @Column(nullable = false)
+    private String origenRegistro = "BACKEND";
+
+    @Column(unique = true)
+    private String uuidLocal;
 }

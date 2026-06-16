@@ -28,7 +28,11 @@ public class SincronizacionCitaService {
 
         if (dto.getUuidLocal() != null &&
                 citaRepository.findByUuidLocal(dto.getUuidLocal()).isPresent()) {
-            throw new RuntimeException("La cita ya fue sincronizada anteriormente");
+            Cita existente = citaRepository.findByUuidLocal(dto.getUuidLocal()).get();
+            actualizarDatosCita(existente, dto);
+            existente.setFechaSincronizacion(LocalDateTime.now());
+            existente.setSincronizado(true);
+            return citaRepository.save(existente);
         }
 
         Paciente paciente = pacienteRepository.findById(dto.getPacienteId())
@@ -41,12 +45,7 @@ public class SincronizacionCitaService {
 
         cita.setPaciente(paciente);
         cita.setMedico(medico);
-        cita.setTipoCita(TipoCita.valueOf(dto.getTipoCita()));
-        cita.setFecha(dto.getFecha());
-        cita.setHora(dto.getHora());
-        cita.setEspecialidad(dto.getEspecialidad());
-        cita.setMotivoConsulta(dto.getMotivoConsulta());
-        cita.setEstado(EstadoCita.valueOf(dto.getEstado()));
+        actualizarDatosCita(cita, dto);
 
         cita.setUuidLocal(dto.getUuidLocal());
         cita.setOrigenRegistro("INDEXEDDB");
@@ -54,5 +53,14 @@ public class SincronizacionCitaService {
         cita.setFechaSincronizacion(LocalDateTime.now());
 
         return citaRepository.save(cita);
+    }
+
+    private void actualizarDatosCita(Cita cita, SincronizacionCitaRequestDTO dto) {
+        cita.setTipoCita(TipoCita.valueOf(dto.getTipoCita()));
+        cita.setFecha(dto.getFecha());
+        cita.setHora(dto.getHora());
+        cita.setEspecialidad(dto.getEspecialidad());
+        cita.setMotivoConsulta(dto.getMotivoConsulta());
+        cita.setEstado(EstadoCita.valueOf(dto.getEstado()));
     }
 }

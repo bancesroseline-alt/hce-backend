@@ -28,7 +28,8 @@ public class PacienteService {
                 p.getTelefono(),
                 p.getDireccion(),
                 p.getAntecedentes(),
-                p.getEstado()
+                p.getEstado(),
+                p.getUuidLocal()
         );
     }
 

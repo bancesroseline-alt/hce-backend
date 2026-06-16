@@ -32,4 +32,6 @@ public class PacienteDTO {
     private String antecedentes;
 
     private Boolean estado;
+
+    private String uuidLocal;
 }

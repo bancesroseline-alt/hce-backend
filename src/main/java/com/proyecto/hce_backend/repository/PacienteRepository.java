@@ -10,10 +10,13 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
 
     Optional<Paciente> findByNumeroDocumento(String numeroDocumento);
 
+    Optional<Paciente> findByUuidLocal(String uuidLocal);
+
     List<Paciente> findByNombresContainingIgnoreCaseOrApellidosContainingIgnoreCaseOrNumeroDocumentoContainingIgnoreCase(
             String nombres,
             String apellidos,
             String numeroDocumento
     );
 
-    boolean existsByNumeroDocumento(String numeroDocumento);}
+    boolean existsByNumeroDocumento(String numeroDocumento);
+}
