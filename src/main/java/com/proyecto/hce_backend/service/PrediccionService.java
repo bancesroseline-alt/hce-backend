@@ -55,7 +55,7 @@ public PrediccionResponseDTO predecirInasistencia(PrediccionRequestDTO dto) {
 
     Map<String, Object> request = new HashMap<>();
 
-    request.put("edad", dto.getEdad());
+    request.put("edad", dto.getEdad() != null ? dto.getEdad() : paciente.getEdad());
 
     request.put(
             "sexo",
@@ -74,26 +74,30 @@ public PrediccionResponseDTO predecirInasistencia(PrediccionRequestDTO dto) {
 
     request.put(
             "dia_semana",
-            cita != null
+            dto.getDiaSemana() != null && !dto.getDiaSemana().isBlank()
+                    ? dto.getDiaSemana()
+                    : cita != null
                     ? cita.getFecha().getDayOfWeek().toString()
                     : "MONDAY"
     );
 
     request.put(
             "hora",
-            cita != null
+            dto.getHora() != null
+                    ? dto.getHora()
+                    : cita != null
                     ? cita.getHora().getHour()
                     : 10
     );
 
     request.put(
             "antecedentes_inasistencias",
-            dto.getCantidadInasistenciasPrevias()
+            dto.getCantidadInasistenciasPrevias() != null ? dto.getCantidadInasistenciasPrevias() : 0
     );
 
     request.put(
             "cantidad_citas_previas",
-            dto.getCantidadCitasPrevias()
+            dto.getCantidadCitasPrevias() != null ? dto.getCantidadCitasPrevias() : 0
     );
 
     FastApiResponseDTO respuestaIA =
@@ -102,6 +106,10 @@ public PrediccionResponseDTO predecirInasistencia(PrediccionRequestDTO dto) {
                 request,
                 FastApiResponseDTO.class
         );
+
+    if (respuestaIA == null || respuestaIA.getProbabilidad() == null) {
+        throw new RuntimeException("La API ML no devolvio una probabilidad valida");
+    }
 
     double probabilidad = respuestaIA.getProbabilidad();
 

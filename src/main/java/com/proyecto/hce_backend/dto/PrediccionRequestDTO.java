@@ -16,4 +16,6 @@ public class PrediccionRequestDTO {
     private String tipoCita;
     private String especialidad;
     private Long citaId;
+    private String diaSemana;
+    private Integer hora;
 }
