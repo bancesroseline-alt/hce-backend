@@ -1,6 +1,7 @@
 package com.proyecto.hce_backend.service;
 
 import com.proyecto.hce_backend.dto.FastApiResponseDTO;
+import com.proyecto.hce_backend.dto.PrediccionPacienteDTO;
 import com.proyecto.hce_backend.dto.PrediccionRequestDTO;
 import com.proyecto.hce_backend.dto.PrediccionResponseDTO;
 import com.proyecto.hce_backend.model.Cita;
@@ -14,6 +15,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -151,6 +153,51 @@ public List<PrediccionInasistencia> listarPorPaciente(Long pacienteId) {
 
 public List<PrediccionInasistencia> listarAlertas() {
     return prediccionRepository.findByNivelRiesgo("ALTO");
+}
+
+public List<PrediccionPacienteDTO> listarPrediccionesPacientes() {
+    return pacienteRepository.findAll()
+            .stream()
+            .map(this::predecirPaciente)
+            .toList();
+}
+
+private PrediccionPacienteDTO predecirPaciente(Paciente paciente) {
+    List<Cita> citas = citaRepository.findByPacienteId(paciente.getId());
+    Cita citaReferencia = citas.stream()
+            .filter(c -> c.getEstado() == com.proyecto.hce_backend.model.EstadoCita.PROGRAMADA)
+            .max(Comparator.comparing(Cita::getFecha).thenComparing(Cita::getHora))
+            .orElseGet(() -> citas.stream()
+                    .max(Comparator.comparing(Cita::getFecha).thenComparing(Cita::getHora))
+                    .orElse(null));
+
+    int inasistencias = (int) citas.stream()
+            .filter(c -> c.getEstado() == com.proyecto.hce_backend.model.EstadoCita.NO_ASISTIO)
+            .count();
+
+    PrediccionRequestDTO request = new PrediccionRequestDTO();
+    request.setPacienteId(paciente.getId());
+    request.setEdad(paciente.getEdad());
+    request.setCantidadCitasPrevias(citas.size());
+    request.setCantidadInasistenciasPrevias(inasistencias);
+    request.setTipoCita(citaReferencia != null ? citaReferencia.getTipoCita().name() : "CONSULTA");
+    request.setEspecialidad(citaReferencia != null ? citaReferencia.getEspecialidad() : "Medicina General");
+    request.setCitaId(citaReferencia != null ? citaReferencia.getId() : null);
+    request.setDiaSemana(citaReferencia != null ? citaReferencia.getFecha().getDayOfWeek().toString() : "MONDAY");
+    request.setHora(citaReferencia != null ? citaReferencia.getHora().getHour() : 10);
+
+    PrediccionResponseDTO prediccion = predecirInasistencia(request);
+
+    return new PrediccionPacienteDTO(
+            paciente.getId(),
+            paciente.getNombres(),
+            paciente.getApellidos(),
+            prediccion.getProbabilidadInasistencia(),
+            prediccion.getNivelRiesgo(),
+            prediccion.getRecomendacion(),
+            citas.size(),
+            inasistencias
+    );
 }
 
 }

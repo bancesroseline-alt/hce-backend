@@ -1,6 +1,7 @@
 package com.proyecto.hce_backend.controller;
 
 import com.proyecto.hce_backend.dto.PrediccionRequestDTO;
+import com.proyecto.hce_backend.dto.PrediccionPacienteDTO;
 import com.proyecto.hce_backend.dto.PrediccionResponseDTO;
 import com.proyecto.hce_backend.model.PrediccionInasistencia;
 import com.proyecto.hce_backend.service.PrediccionService;
@@ -33,5 +34,10 @@ public class PrediccionController {
     @GetMapping("/alertas")
     public List<PrediccionInasistencia> listarAlertas() {
         return prediccionService.listarAlertas();
+    }
+
+    @GetMapping("/pacientes")
+    public List<PrediccionPacienteDTO> listarPrediccionesPacientes() {
+        return prediccionService.listarPrediccionesPacientes();
     }
 }
