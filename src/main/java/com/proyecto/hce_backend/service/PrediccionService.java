@@ -174,6 +174,10 @@ private PrediccionPacienteDTO predecirPaciente(Paciente paciente) {
     int inasistencias = (int) citas.stream()
             .filter(c -> c.getEstado() == com.proyecto.hce_backend.model.EstadoCita.NO_ASISTIO)
             .count();
+    int reprogramaciones = (int) citas.stream()
+            .filter(c -> c.getEstado() == com.proyecto.hce_backend.model.EstadoCita.NO_ASISTIO
+                    || c.getEstado() == com.proyecto.hce_backend.model.EstadoCita.CANCELADA)
+            .count();
 
     PrediccionRequestDTO request = new PrediccionRequestDTO();
     request.setPacienteId(paciente.getId());
@@ -196,7 +200,8 @@ private PrediccionPacienteDTO predecirPaciente(Paciente paciente) {
             prediccion.getNivelRiesgo(),
             prediccion.getRecomendacion(),
             citas.size(),
-            inasistencias
+            inasistencias,
+            reprogramaciones
     );
 }
 

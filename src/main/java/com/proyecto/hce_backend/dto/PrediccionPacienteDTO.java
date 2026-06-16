@@ -17,4 +17,5 @@ public class PrediccionPacienteDTO {
     private String recomendacion;
     private Integer cantidadCitasPrevias;
     private Integer cantidadInasistenciasPrevias;
+    private Integer cantidadReprogramaciones;
 }

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class CitaService {
@@ -54,7 +55,7 @@ public class CitaService {
         cita.setTipoCita(dto.getTipoCita());
         cita.setFecha(dto.getFecha());
         cita.setHora(dto.getHora());
-        cita.setEspecialidad(dto.getEspecialidad());
+        cita.setEspecialidad(normalizarEspecialidad(dto.getEspecialidad()));
         cita.setMotivoConsulta(dto.getMotivoConsulta());
         cita.setEstado(dto.getEstado() != null ? dto.getEstado() : EstadoCita.PROGRAMADA);
 
@@ -172,7 +173,7 @@ public class CitaService {
         cita.setTipoCita(dto.getTipoCita());
         cita.setFecha(dto.getFecha());
         cita.setHora(dto.getHora());
-        cita.setEspecialidad(dto.getEspecialidad());
+        cita.setEspecialidad(normalizarEspecialidad(dto.getEspecialidad()));
         cita.setMotivoConsulta(dto.getMotivoConsulta());
         cita.setEstado(dto.getEstado() != null ? dto.getEstado() : cita.getEstado());
 
@@ -194,5 +195,24 @@ public class CitaService {
     private boolean esProfesionalCita(String rol) {
         String rolNormalizado = rol == null ? "" : rol.replace("ROLE_", "").toUpperCase();
         return "MEDICO".equals(rolNormalizado) || "ENFERMERO".equals(rolNormalizado);
+    }
+
+    private String normalizarEspecialidad(String valor) {
+        if (valor == null) return null;
+
+        String texto = valor.trim().replaceAll("\\s+", " ").toLowerCase(new Locale("es", "PE"));
+        if (texto.isBlank()) return texto;
+
+        String[] palabras = texto.split(" ");
+        StringBuilder normalizada = new StringBuilder();
+
+        for (String palabra : palabras) {
+            if (palabra.isBlank()) continue;
+            if (normalizada.length() > 0) normalizada.append(" ");
+            normalizada.append(palabra.substring(0, 1).toUpperCase(new Locale("es", "PE")));
+            if (palabra.length() > 1) normalizada.append(palabra.substring(1));
+        }
+
+        return normalizada.toString();
     }
 }

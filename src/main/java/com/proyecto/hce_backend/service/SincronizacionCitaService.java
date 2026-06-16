@@ -8,6 +8,7 @@ import com.proyecto.hce_backend.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 @Service
 public class SincronizacionCitaService {
@@ -68,8 +69,27 @@ public class SincronizacionCitaService {
         cita.setTipoCita(TipoCita.valueOf(dto.getTipoCita()));
         cita.setFecha(dto.getFecha());
         cita.setHora(dto.getHora());
-        cita.setEspecialidad(dto.getEspecialidad());
+        cita.setEspecialidad(normalizarEspecialidad(dto.getEspecialidad()));
         cita.setMotivoConsulta(dto.getMotivoConsulta());
         cita.setEstado(EstadoCita.valueOf(dto.getEstado()));
+    }
+
+    private String normalizarEspecialidad(String valor) {
+        if (valor == null) return null;
+
+        String texto = valor.trim().replaceAll("\\s+", " ").toLowerCase(new Locale("es", "PE"));
+        if (texto.isBlank()) return texto;
+
+        String[] palabras = texto.split(" ");
+        StringBuilder normalizada = new StringBuilder();
+
+        for (String palabra : palabras) {
+            if (palabra.isBlank()) continue;
+            if (normalizada.length() > 0) normalizada.append(" ");
+            normalizada.append(palabra.substring(0, 1).toUpperCase(new Locale("es", "PE")));
+            if (palabra.length() > 1) normalizada.append(palabra.substring(1));
+        }
+
+        return normalizada.toString();
     }
 }
