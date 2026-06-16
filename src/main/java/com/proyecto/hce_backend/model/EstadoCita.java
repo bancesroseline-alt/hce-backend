@@ -4,5 +4,6 @@ public enum EstadoCita {
     PROGRAMADA,
     ATENDIDA,
     CANCELADA,
-    NO_ASISTIO
+    NO_ASISTIO,
+    REPROGRAMADA
 }
