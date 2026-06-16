@@ -72,10 +72,6 @@ public class CitaService {
     public List<CitaDTO> listarPorPaciente(Long pacienteId) {
         List<Cita> citas = citaRepository.findByPacienteId(pacienteId);
 
-        if (citas.isEmpty()) {
-            throw new RuntimeException("El paciente no tiene citas registradas");
-        }
-
         return citas.stream()
                 .map(this::convertirADTO)
                 .toList();
