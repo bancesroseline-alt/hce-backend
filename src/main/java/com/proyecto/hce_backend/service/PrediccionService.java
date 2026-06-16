@@ -190,7 +190,13 @@ private PrediccionPacienteDTO predecirPaciente(Paciente paciente) {
     request.setDiaSemana(citaReferencia != null ? citaReferencia.getFecha().getDayOfWeek().toString() : "MONDAY");
     request.setHora(citaReferencia != null ? citaReferencia.getHora().getHour() : 10);
 
-    PrediccionResponseDTO prediccion = predecirInasistencia(request);
+    PrediccionResponseDTO prediccion;
+
+    try {
+        prediccion = predecirInasistencia(request);
+    } catch (Exception error) {
+        prediccion = obtenerPrediccionRespaldo(paciente, citas, inasistencias, reprogramaciones);
+    }
 
     return new PrediccionPacienteDTO(
             paciente.getId(),
@@ -202,6 +208,61 @@ private PrediccionPacienteDTO predecirPaciente(Paciente paciente) {
             citas.size(),
             inasistencias,
             reprogramaciones
+    );
+}
+
+private PrediccionResponseDTO obtenerPrediccionRespaldo(
+        Paciente paciente,
+        List<Cita> citas,
+        int inasistencias,
+        int reprogramaciones) {
+
+    return prediccionRepository.findTopByPacienteIdOrderByFechaPrediccionDesc(paciente.getId())
+            .map(prediccion -> new PrediccionResponseDTO(
+                    paciente.getId(),
+                    prediccion.getProbabilidadInasistencia(),
+                    prediccion.getNivelRiesgo(),
+                    (prediccion.getRecomendacion() != null
+                            ? prediccion.getRecomendacion()
+                            : "Ultimo resultado guardado") + " (ultimo resultado guardado)"
+            ))
+            .orElseGet(() -> calcularPrediccionLocal(paciente, citas, inasistencias, reprogramaciones));
+}
+
+private PrediccionResponseDTO calcularPrediccionLocal(
+        Paciente paciente,
+        List<Cita> citas,
+        int inasistencias,
+        int reprogramaciones) {
+
+    double probabilidad = 0.0;
+
+    if (!citas.isEmpty()) {
+        probabilidad = (double) inasistencias / citas.size();
+        probabilidad += Math.min(reprogramaciones * 0.08, 0.24);
+    }
+
+    probabilidad = Math.max(0.0, Math.min(probabilidad, 1.0));
+
+    String nivelRiesgo;
+    String recomendacion;
+
+    if (probabilidad >= 0.70) {
+        nivelRiesgo = "ALTO";
+        recomendacion = "Seguimiento inmediato (estimacion local)";
+    } else if (probabilidad >= 0.40) {
+        nivelRiesgo = "MEDIO";
+        recomendacion = "Monitoreo preventivo (estimacion local)";
+    } else {
+        nivelRiesgo = "BAJO";
+        recomendacion = "Sin accion (estimacion local)";
+    }
+
+    return new PrediccionResponseDTO(
+            paciente.getId(),
+            probabilidad,
+            nivelRiesgo,
+            recomendacion
     );
 }
 
