@@ -41,8 +41,8 @@ public class CitaService {
         Usuario medico = usuarioRepository.findById(dto.getMedicoId())
                 .orElseThrow(() -> new RuntimeException("Médico no encontrado"));
 
-        if (!"MEDICO".equals(medico.getRol())) {
-            throw new RuntimeException("El usuario seleccionado no tiene rol MEDICO");
+        if (!esProfesionalCita(medico.getRol())) {
+            throw new RuntimeException("El usuario seleccionado no tiene rol MEDICO o ENFERMERO");
         }
 
         Cita cita = new Cita();
@@ -95,7 +95,7 @@ public class CitaService {
 
     private void validarCampos(CitaRequestDTO dto) {
         if (dto.getPacienteId() == null) throw new RuntimeException("El paciente es obligatorio");
-        if (dto.getMedicoId() == null) throw new RuntimeException("El médico es obligatorio");
+        if (dto.getMedicoId() == null) throw new RuntimeException("El profesional es obligatorio");
         if (dto.getTipoCita() == null) throw new RuntimeException("El tipo de cita es obligatorio");
         if (dto.getFecha() == null) throw new RuntimeException("La fecha es obligatoria");
         if (dto.getHora() == null) throw new RuntimeException("La hora es obligatoria");
@@ -153,8 +153,8 @@ public class CitaService {
         Usuario medico = usuarioRepository.findById(dto.getMedicoId())
                 .orElseThrow(() -> new RuntimeException("Médico no encontrado"));
 
-        if (!"MEDICO".equals(medico.getRol())) {
-            throw new RuntimeException("El usuario seleccionado no tiene rol MEDICO");
+        if (!esProfesionalCita(medico.getRol())) {
+            throw new RuntimeException("El usuario seleccionado no tiene rol MEDICO o ENFERMERO");
         }
 
         cita.setPaciente(paciente);
@@ -176,5 +176,10 @@ public class CitaService {
     public Long citasHoy() {
         LocalDate hoy = LocalDate.now();
         return citaRepository.countByFecha(hoy);
+    }
+
+    private boolean esProfesionalCita(String rol) {
+        String rolNormalizado = rol == null ? "" : rol.replace("ROLE_", "").toUpperCase();
+        return "MEDICO".equals(rolNormalizado) || "ENFERMERO".equals(rolNormalizado);
     }
 }
