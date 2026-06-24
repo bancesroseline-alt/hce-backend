@@ -31,5 +31,19 @@ public class UsuarioController {
     public UsuarioDTO actualizarRol(@PathVariable Long id, @RequestParam String rol) {
         return usuarioService.actualizarRol(id, rol);
     }
-}
 
+    @PutMapping("/{id}")
+    public UsuarioDTO actualizarUsuario(@PathVariable Long id, @RequestBody Usuario usuario) {
+        return usuarioService.actualizarUsuario(id, usuario);
+    }
+
+    @PatchMapping("/{id}/estado")
+    public UsuarioDTO actualizarEstado(@PathVariable Long id, @RequestParam Boolean estado) {
+        return usuarioService.actualizarEstado(id, estado);
+    }
+
+    @DeleteMapping("/{id}")
+    public void eliminarUsuario(@PathVariable Long id) {
+        usuarioService.eliminarUsuario(id);
+    }
+}
