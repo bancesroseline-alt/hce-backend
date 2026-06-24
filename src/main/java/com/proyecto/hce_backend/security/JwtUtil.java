@@ -22,11 +22,16 @@ public class JwtUtil {
     public String generarToken(Usuario usuario) {
         return Jwts.builder()
                 .subject(usuario.getUsername())
-                .claim("rol", usuario.getRol())
+                .claim("rol", normalizarRol(usuario.getRol()))
                 .claim("id", usuario.getId())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(getSigningKey())
                 .compact();
+    }
+
+    private String normalizarRol(String rol) {
+        String rolNormalizado = rol == null ? "" : rol.replace("ROLE_", "").toUpperCase();
+        return rolNormalizado.equals("ADMINISTRADOR") ? "ADMIN" : rolNormalizado;
     }
 }

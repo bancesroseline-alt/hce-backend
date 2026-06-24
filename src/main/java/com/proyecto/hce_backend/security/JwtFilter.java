@@ -48,7 +48,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         try {
             String username = jwtService.extractUsername(token);
-            String rol = jwtService.extractRol(token);
+            String rol = normalizarRol(jwtService.extractRol(token));
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
@@ -66,5 +66,10 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String normalizarRol(String rol) {
+        String rolNormalizado = rol == null ? "" : rol.replace("ROLE_", "").toUpperCase();
+        return rolNormalizado.equals("ADMINISTRADOR") ? "ADMIN" : rolNormalizado;
     }
 }
