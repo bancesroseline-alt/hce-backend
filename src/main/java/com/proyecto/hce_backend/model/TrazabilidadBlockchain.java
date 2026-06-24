@@ -18,6 +18,16 @@ public class TrazabilidadBlockchain {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String entityType;
+
+    private String entityId;
+
+    private String action;
+
+    private String userId;
+
+    private String status;
+
     private Long atencionId;
 
     private Long usuarioId;
@@ -35,4 +45,15 @@ public class TrazabilidadBlockchain {
 
     @Column(nullable = false)
     private Boolean integridadValida;
+
+    private String fabricTransactionId;
+
+    private String fabricChannel;
+
+    private String fabricChaincode;
+
+    private Boolean registradoEnFabric;
+
+    @Column(length = 1000)
+    private String errorFabric;
 }

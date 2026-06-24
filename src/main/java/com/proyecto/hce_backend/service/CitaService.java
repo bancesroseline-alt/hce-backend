@@ -27,6 +27,9 @@ public class CitaService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Autowired
+    private BlockchainTraceabilityService traceabilityService;
+
     public CitaDTO registrarCita(CitaRequestDTO dto) {
 
         validarCampos(dto);
@@ -59,7 +62,10 @@ public class CitaService {
             throw new RuntimeException("No se puede registrar una cita para un paciente dado de baja");
         }
 
-        return convertirADTO(citaRepository.save(cita));
+        Cita guardada = citaRepository.save(cita);
+        traceabilityService.registrarEntidad("CITA", "CREAR", guardada, medico.getId());
+
+        return convertirADTO(guardada);
     }
 
     public List<CitaDTO> listarCitas() {
@@ -90,7 +96,11 @@ public class CitaService {
 
         cita.setEstado(estado);
 
-        return convertirADTO(citaRepository.save(cita));
+        Cita guardada = citaRepository.save(cita);
+        Long usuarioId = guardada.getMedico() != null ? guardada.getMedico().getId() : null;
+        traceabilityService.registrarEntidad("CITA", "ACTUALIZAR", guardada, usuarioId);
+
+        return convertirADTO(guardada);
     }
 
     private void validarCampos(CitaRequestDTO dto) {
@@ -166,7 +176,10 @@ public class CitaService {
         cita.setMotivoConsulta(dto.getMotivoConsulta());
         cita.setEstado(dto.getEstado() != null ? dto.getEstado() : cita.getEstado());
 
-        return convertirADTO(citaRepository.save(cita));
+        Cita guardada = citaRepository.save(cita);
+        traceabilityService.registrarEntidad("CITA", "ACTUALIZAR", guardada, medico.getId());
+
+        return convertirADTO(guardada);
     }
 
     public Long totalCitas() {

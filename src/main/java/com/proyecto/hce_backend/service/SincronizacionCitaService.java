@@ -15,13 +15,16 @@ public class SincronizacionCitaService {
     final CitaRepository citaRepository;
     final PacienteRepository pacienteRepository;
     final UsuarioRepository usuarioRepository;
+    final BlockchainTraceabilityService traceabilityService;
 
     public SincronizacionCitaService(CitaRepository citaRepository,
                                      PacienteRepository pacienteRepository,
-                                     UsuarioRepository usuarioRepository) {
+                                     UsuarioRepository usuarioRepository,
+                                     BlockchainTraceabilityService traceabilityService) {
         this.citaRepository = citaRepository;
         this.pacienteRepository = pacienteRepository;
         this.usuarioRepository = usuarioRepository;
+        this.traceabilityService = traceabilityService;
     }
 
     public Cita sincronizarCita(SincronizacionCitaRequestDTO dto) {
@@ -32,7 +35,10 @@ public class SincronizacionCitaService {
             actualizarDatosCita(existente, dto);
             existente.setFechaSincronizacion(LocalDateTime.now());
             existente.setSincronizado(true);
-            return citaRepository.save(existente);
+            Cita guardada = citaRepository.save(existente);
+            Long usuarioId = guardada.getMedico() != null ? guardada.getMedico().getId() : null;
+            traceabilityService.registrarEntidad("CITA", "SINCRONIZAR", guardada, usuarioId);
+            return guardada;
         }
 
         Paciente paciente = pacienteRepository.findById(dto.getPacienteId())
@@ -52,7 +58,10 @@ public class SincronizacionCitaService {
         cita.setSincronizado(true);
         cita.setFechaSincronizacion(LocalDateTime.now());
 
-        return citaRepository.save(cita);
+        Cita guardada = citaRepository.save(cita);
+        traceabilityService.registrarEntidad("CITA", "SINCRONIZAR", guardada, medico.getId());
+
+        return guardada;
     }
 
     private void actualizarDatosCita(Cita cita, SincronizacionCitaRequestDTO dto) {

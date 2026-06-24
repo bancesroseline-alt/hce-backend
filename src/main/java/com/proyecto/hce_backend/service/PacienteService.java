@@ -14,6 +14,9 @@ public class PacienteService {
     @Autowired
     private PacienteRepository pacienteRepository;
 
+    @Autowired
+    private BlockchainTraceabilityService traceabilityService;
+
     public PacienteDTO convertirAPacienteDTO(Paciente p) {
         return new PacienteDTO(
                 p.getId(),
@@ -49,6 +52,7 @@ public class PacienteService {
 
         // GUARDAR
         Paciente guardado = pacienteRepository.save(paciente);
+        traceabilityService.registrarEntidad("PACIENTE", "CREAR", guardado, null);
 
         // RETORNAR DTO
         return convertirAPacienteDTO(guardado);
@@ -97,7 +101,10 @@ public class PacienteService {
         paciente.setAntecedentes(pacienteActualizado.getAntecedentes());
         paciente.setEstado(pacienteActualizado.getEstado());
 
-        return convertirAPacienteDTO(pacienteRepository.save(paciente));
+        Paciente guardado = pacienteRepository.save(paciente);
+        traceabilityService.registrarEntidad("PACIENTE", "ACTUALIZAR", guardado, null);
+
+        return convertirAPacienteDTO(guardado);
     }
 
     public PacienteDTO darDeBajaPaciente(Long id) {
@@ -106,7 +113,10 @@ public class PacienteService {
 
         paciente.setEstado(false);
 
-        return convertirAPacienteDTO(pacienteRepository.save(paciente));
+        Paciente guardado = pacienteRepository.save(paciente);
+        traceabilityService.registrarEntidad("PACIENTE", "ELIMINAR_LOGICO", guardado, null);
+
+        return convertirAPacienteDTO(guardado);
     }
 
     private void validarDocumentoPaciente(Paciente paciente) {

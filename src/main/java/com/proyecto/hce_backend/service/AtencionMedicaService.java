@@ -27,6 +27,12 @@ public class AtencionMedicaService {
     @Autowired
     private CitaRepository citaRepository;
 
+    @Autowired
+    private BlockchainTraceabilityService traceabilityService;
+
+    @Autowired
+    private HashService hashService;
+
     public AtencionMedicaDTO registrarAtencion(AtencionMedicaRequestDTO dto) {
 
         validarCamposBase(dto);
@@ -73,10 +79,14 @@ public class AtencionMedicaService {
         atencion.setEstado(dto.getEstado());
 
         AtencionMedica guardada = atencionMedicaRepository.save(atencion);
+        guardada.setHashBlockchain(hashService.generarHashAtencion(guardada));
+        guardada = atencionMedicaRepository.save(guardada);
+        traceabilityService.registrarEntidad("ATENCION", "CREAR", guardada, usuario.getId());
 
         if (cita != null) {
             cita.setEstado(EstadoCita.ATENDIDA);
             citaRepository.save(cita);
+            traceabilityService.registrarEntidad("CITA", "ACTUALIZAR", cita, usuario.getId());
         }
 
         return convertirADTO(guardada);
@@ -207,7 +217,12 @@ public class AtencionMedicaService {
             citaRepository.save(cita);
         }
 
-        return convertirADTO(atencionMedicaRepository.save(atencion));
+        AtencionMedica guardada = atencionMedicaRepository.save(atencion);
+        guardada.setHashBlockchain(hashService.generarHashAtencion(guardada));
+        guardada = atencionMedicaRepository.save(guardada);
+        traceabilityService.registrarEntidad("ATENCION", "ACTUALIZAR", guardada, usuario.getId());
+
+        return convertirADTO(guardada);
     }
 
     private void validarCitaSegunTipoAtencion(AtencionMedicaRequestDTO dto) {

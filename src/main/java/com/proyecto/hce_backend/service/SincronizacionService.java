@@ -18,17 +18,20 @@ public class SincronizacionService {
     final UsuarioRepository usuarioRepository;
     final CitaRepository citaRepository;
     final BlockchainService blockchainService;
+    final BlockchainTraceabilityService traceabilityService;
 
     public SincronizacionService(AtencionMedicaRepository atencionMedicaRepository,
                                  PacienteRepository pacienteRepository,
                                  UsuarioRepository usuarioRepository,
                                  CitaRepository citaRepository,
-                                 BlockchainService blockchainService) {
+                                 BlockchainService blockchainService,
+                                 BlockchainTraceabilityService traceabilityService) {
         this.atencionMedicaRepository = atencionMedicaRepository;
         this.pacienteRepository = pacienteRepository;
         this.usuarioRepository = usuarioRepository;
         this.citaRepository = citaRepository;
         this.blockchainService = blockchainService;
+        this.traceabilityService = traceabilityService;
     }
 
     public AtencionMedica sincronizarAtencion(SincronizacionRequestDTO dto) {
@@ -85,7 +88,10 @@ public class SincronizacionService {
         String hash = blockchainService.generarHashAtencion(guardada);
         guardada.setHashBlockchain(hash);
 
-        return atencionMedicaRepository.save(guardada);
+        guardada = atencionMedicaRepository.save(guardada);
+        blockchainService.registrarTrazabilidad(guardada, "SINCRONIZAR");
+
+        return guardada;
     }
 
     public Paciente sincronizarPaciente(Paciente pacienteOffline) {
@@ -108,7 +114,9 @@ public class SincronizacionService {
                     existente.setUuidLocal(pacienteOffline.getUuidLocal());
                     existente.setFechaSincronizacion(LocalDateTime.now());
                     existente.setSincronizado(true);
-                    return pacienteRepository.save(existente);
+                    Paciente guardado = pacienteRepository.save(existente);
+                    traceabilityService.registrarEntidad("PACIENTE", "SINCRONIZAR", guardado, null);
+                    return guardado;
                 }
 
                 return existente;
@@ -121,6 +129,9 @@ public class SincronizacionService {
         pacienteOffline.setSincronizado(true);
         pacienteOffline.setFechaSincronizacion(LocalDateTime.now());
 
-        return pacienteRepository.save(pacienteOffline);
+        Paciente guardado = pacienteRepository.save(pacienteOffline);
+        traceabilityService.registrarEntidad("PACIENTE", "SINCRONIZAR", guardado, null);
+
+        return guardado;
     }
 }
