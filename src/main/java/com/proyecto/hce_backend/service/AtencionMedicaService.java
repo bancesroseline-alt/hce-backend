@@ -179,7 +179,9 @@ public class AtencionMedicaService {
             cita = citaRepository.findById(dto.getCitaId())
                     .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
 
-            if (atencionMedicaRepository.existsByCitaId(dto.getCitaId())) {
+            boolean cambiaDeCita = atencion.getCita() == null ||
+                    !atencion.getCita().getId().equals(dto.getCitaId());
+            if (cambiaDeCita && atencionMedicaRepository.existsByCitaId(dto.getCitaId())) {
                 throw new RuntimeException("Esta cita ya tiene una atención médica registrada");
             }
 

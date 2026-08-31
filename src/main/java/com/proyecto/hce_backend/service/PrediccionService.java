@@ -126,7 +126,7 @@ public PrediccionResponseDTO predecirInasistencia(PrediccionRequestDTO dto) {
         recomendacion = "Se recomienda enviar recordatorio antes de la cita.";
     } else {
         nivelRiesgo = "BAJO";
-        recomendacion = "No se requiere recomendación de reprogramación.";
+        recomendacion = null;
     }
 
     PrediccionInasistencia prediccion = new PrediccionInasistencia();
@@ -257,7 +257,7 @@ private PrediccionResponseDTO calcularPrediccionLocal(
         recomendacion = "Monitoreo preventivo (estimacion local)";
     } else {
         nivelRiesgo = "BAJO";
-        recomendacion = "Sin accion (estimacion local)";
+        recomendacion = null;
     }
 
     return new PrediccionResponseDTO(

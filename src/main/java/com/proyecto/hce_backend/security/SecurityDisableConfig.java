@@ -6,12 +6,16 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpMethod;
 
 @Configuration
 public class SecurityDisableConfig {
 
     @Autowired
     private JwtFilter jwtFilter;
+
+    @Autowired
+    private AuditLoggingFilter auditLoggingFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -26,8 +30,9 @@ public class SecurityDisableConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         
                         .requestMatchers("/api/dashboard/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/metricas/**", "/api/logs/**", "/api/errores/**", "/api/feedback/**").hasRole("ADMIN")
                                        
-                        .requestMatchers("/api/usuarios/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
+                        .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
                         .requestMatchers("/api/pacientes/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
                         .requestMatchers("/api/atenciones/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
                         .requestMatchers("/api/historias-clinicas/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
@@ -37,7 +42,8 @@ public class SecurityDisableConfig {
 
                         .anyRequest().authenticated()
                 )
-               .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+               .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+               .addFilterAfter(auditLoggingFilter, JwtFilter.class);
 
         return http.build();
     }

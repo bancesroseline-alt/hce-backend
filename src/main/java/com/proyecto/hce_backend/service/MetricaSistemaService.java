@@ -6,6 +6,7 @@ import com.proyecto.hce_backend.repository.FeedbackSistemaRepository;
 import com.proyecto.hce_backend.repository.LogSistemaRepository;
 import com.proyecto.hce_backend.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
+import java.lang.management.ManagementFactory;
 
 @Service
 public class MetricaSistemaService {
@@ -26,11 +27,23 @@ public class MetricaSistemaService {
     }
 
     public MetricaSistemaDTO obtenerMetricas() {
+        long logs = logSistemaRepository.count();
+        long errores = errorSistemaRepository.count();
+        Runtime runtime = Runtime.getRuntime();
+        long usadaMb = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024);
+        long disponibleMb = runtime.maxMemory() / (1024 * 1024);
+        long uptime = ManagementFactory.getRuntimeMXBean().getUptime() / 1000;
+        double tasaErrores = logs == 0 ? 0.0 : (errores * 100.0) / logs;
+
         return new MetricaSistemaDTO(
                 usuarioRepository.count(),
-                logSistemaRepository.count(),
-                errorSistemaRepository.count(),
-                feedbackSistemaRepository.count()
+                logs,
+                errores,
+                feedbackSistemaRepository.count(),
+                usadaMb,
+                disponibleMb,
+                uptime,
+                Math.round(tasaErrores * 100.0) / 100.0
         );
     }
 }
