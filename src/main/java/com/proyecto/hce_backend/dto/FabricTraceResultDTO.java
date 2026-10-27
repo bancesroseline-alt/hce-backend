@@ -13,4 +13,7 @@ public class FabricTraceResultDTO {
     private String channel;
     private String chaincode;
     private String errorMessage;
+    private Integer version;
+    private Long blockNumber;
+    private String mode;
 }

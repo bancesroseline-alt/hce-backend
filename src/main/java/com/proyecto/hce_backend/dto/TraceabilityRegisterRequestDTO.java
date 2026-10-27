@@ -14,4 +14,5 @@ public class TraceabilityRegisterRequestDTO {
     private String hash;
     private LocalDateTime timestamp;
     private String status;
+    private String operationId;
 }

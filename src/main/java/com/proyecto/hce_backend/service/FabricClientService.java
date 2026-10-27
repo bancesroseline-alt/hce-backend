@@ -2,14 +2,24 @@ package com.proyecto.hce_backend.service;
 
 import com.proyecto.hce_backend.dto.FabricTraceResultDTO;
 import com.proyecto.hce_backend.dto.TraceabilityRegisterRequestDTO;
+import com.proyecto.hce_backend.model.LedgerBloque;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
-import java.util.UUID;
 
+/**
+ * Punto unico de acceso al ledger de evidencias.
+ *
+ * - fabric.enabled=false (por defecto): usa el ledger SIMULADO (LedgerService), con las mismas
+ *   operaciones del contrato hce-traceability.
+ * - fabric.enabled=true: aqui se conectara Fabric Gateway Client. Mientras no exista esa
+ *   integracion, devuelve un error explicito en lugar de aparentar un registro.
+ */
 @Service
 public class FabricClientService {
+
+    private final LedgerService ledgerService;
 
     @Value("${fabric.enabled:false}")
     private boolean fabricEnabled;
@@ -20,36 +30,54 @@ public class FabricClientService {
     @Value("${fabric.chaincode:hce-traceability}")
     private String chaincode;
 
+    public FabricClientService(LedgerService ledgerService) {
+        this.ledgerService = ledgerService;
+    }
+
     public FabricTraceResultDTO registrarTrazabilidad(TraceabilityRegisterRequestDTO request) {
         if (!fabricEnabled) {
+            LedgerBloque bloque = ledgerService.registerEvidence(
+                    request.getEntityType(),
+                    request.getEntityId(),
+                    request.getHash(),
+                    request.getAction(),
+                    request.getUserId(),
+                    request.getOperationId()
+            );
+
             return new FabricTraceResultDTO(
                     true,
                     false,
-                    "LOCAL-" + UUID.randomUUID(),
-                    channel,
-                    chaincode,
-                    "Fabric deshabilitado. Registro guardado localmente para reemplazar por SDK real."
+                    bloque.getTxId(),
+                    bloque.getCanal(),
+                    bloque.getContrato(),
+                    null,
+                    bloque.getVersion(),
+                    bloque.getNumeroBloque(),
+                    LedgerService.MODO
             );
         }
 
-        // Punto unico para integrar el SDK de Hyperledger Fabric.
-        // Aqui se invocaria el chaincode con id, tipo, hash, fecha, usuario, accion y estado.
+        // Aqui se invocara registerEvidence() mediante Fabric Gateway Client.
         return new FabricTraceResultDTO(
                 false,
                 false,
                 null,
                 channel,
                 chaincode,
-                "Cliente Hyperledger Fabric pendiente de configurar"
+                "Cliente Hyperledger Fabric pendiente de configurar",
+                null,
+                null,
+                "FABRIC"
         );
     }
 
     public Optional<String> consultarHashRegistrado(String entityType, String entityId) {
         if (!fabricEnabled) {
-            return Optional.empty();
+            return ledgerService.getEvidence(entityType, entityId).map(LedgerBloque::getHash);
         }
 
-        // Punto unico para consultar el hash registrado en Fabric por tipo de entidad e id.
+        // Aqui se invocara getEvidence() mediante Fabric Gateway Client.
         return Optional.empty();
     }
 }

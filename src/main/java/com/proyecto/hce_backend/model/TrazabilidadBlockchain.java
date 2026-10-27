@@ -54,6 +54,12 @@ public class TrazabilidadBlockchain {
 
     private Boolean registradoEnFabric;
 
+    private Integer version;
+
+    private String operationId;
+
+    private String modoLedger;
+
     @Column(length = 1000)
     private String errorFabric;
 }
