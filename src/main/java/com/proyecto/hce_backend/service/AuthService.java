@@ -1,5 +1,6 @@
 package com.proyecto.hce_backend.service;
 
+import com.proyecto.hce_backend.exception.CredencialesInvalidasException;
 import com.proyecto.hce_backend.model.Usuario;
 import com.proyecto.hce_backend.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +19,10 @@ public class AuthService {
     public Usuario login(String username, String password) {
 
         Usuario usuario = usuarioRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(CredencialesInvalidasException::new);
 
         if (!passwordEncoder.matches(password, usuario.getPassword())) {
-            throw new RuntimeException("Contraseña incorrecta");
+            throw new CredencialesInvalidasException();
         }
 
         return usuario;
