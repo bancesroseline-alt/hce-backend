@@ -33,12 +33,17 @@ public class SecurityDisableConfig {
                         .requestMatchers(HttpMethod.GET, "/api/metricas/**", "/api/logs/**", "/api/errores/**", "/api/feedback/**").hasRole("ADMIN")
                                        
                         .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
-                        .requestMatchers("/api/pacientes/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
-                        .requestMatchers("/api/atenciones/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
-                        .requestMatchers("/api/historias-clinicas/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
-                        .requestMatchers("/api/citas/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
-                        .requestMatchers("/api/predicciones/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
-                        
+                        .requestMatchers("/api/reportes/**").hasRole("ADMIN")
+
+                        // ADMIN solo puede LEER pacientes y citas (los reportes se alimentan de ellos);
+                        // todo lo demas de la informacion clinica es del personal de salud.
+                        .requestMatchers(HttpMethod.GET, "/api/pacientes/**", "/api/citas/**").hasAnyRole("ADMIN", "MEDICO", "ENFERMERO")
+                        .requestMatchers("/api/pacientes/**").hasAnyRole("MEDICO", "ENFERMERO")
+                        .requestMatchers("/api/citas/**").hasAnyRole("MEDICO", "ENFERMERO")
+                        .requestMatchers("/api/atenciones/**").hasAnyRole("MEDICO", "ENFERMERO")
+                        .requestMatchers("/api/historias-clinicas/**").hasAnyRole("MEDICO", "ENFERMERO")
+                        .requestMatchers("/api/predicciones/**").hasAnyRole("MEDICO", "ENFERMERO")
+                        .requestMatchers("/api/sincronizacion/**").hasAnyRole("MEDICO", "ENFERMERO")
 
                         .anyRequest().authenticated()
                 )
