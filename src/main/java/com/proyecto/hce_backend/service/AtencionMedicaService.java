@@ -2,6 +2,7 @@ package com.proyecto.hce_backend.service;
 
 import com.proyecto.hce_backend.dto.AtencionMedicaDTO;
 import com.proyecto.hce_backend.dto.AtencionMedicaRequestDTO;
+import com.proyecto.hce_backend.exception.AccesoDenegadoException;
 import com.proyecto.hce_backend.model.*;
 import com.proyecto.hce_backend.repository.AtencionMedicaRepository;
 import com.proyecto.hce_backend.repository.CitaRepository;
@@ -150,10 +151,27 @@ public class AtencionMedicaService {
         );
     }
 
-    public AtencionMedicaDTO editarAtencion(Long id, AtencionMedicaRequestDTO dto) {
+    /**
+     * Solo el profesional que registro la atencion puede editarla.
+     * El solicitante es el usuario autenticado (token), nunca un dato enviado en la solicitud.
+     */
+    public void verificarAutoria(AtencionMedica atencion, String usernameSolicitante) {
+        String autor = atencion.getUsuario() != null ? atencion.getUsuario().getUsername() : null;
+
+        if (usernameSolicitante == null || autor == null || !autor.equalsIgnoreCase(usernameSolicitante)) {
+            throw new AccesoDenegadoException("Solo el médico que registró la atención puede editarla");
+        }
+    }
+
+    public AtencionMedicaDTO editarAtencion(Long id, AtencionMedicaRequestDTO dto, String usernameSolicitante) {
 
         AtencionMedica atencion = atencionMedicaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Atención médica no encontrada"));
+
+        verificarAutoria(atencion, usernameSolicitante);
+
+        // La autoria no cambia al editar.
+        dto.setUsuarioId(atencion.getUsuario().getId());
 
         validarCamposBase(dto);
 

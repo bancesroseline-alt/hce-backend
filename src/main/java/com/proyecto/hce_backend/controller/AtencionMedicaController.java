@@ -5,6 +5,7 @@ import com.proyecto.hce_backend.dto.AtencionMedicaRequestDTO;
 import com.proyecto.hce_backend.service.AtencionMedicaService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,7 +34,10 @@ public class AtencionMedicaController {
     }
 
     @PutMapping("/{id}")
-    public AtencionMedicaDTO editarAtencion(@PathVariable Long id, @RequestBody AtencionMedicaRequestDTO dto) {
-        return atencionMedicaService.editarAtencion(id, dto);
+    public AtencionMedicaDTO editarAtencion(@PathVariable Long id,
+                                            @RequestBody AtencionMedicaRequestDTO dto,
+                                            Authentication authentication) {
+        String solicitante = authentication != null ? authentication.getName() : null;
+        return atencionMedicaService.editarAtencion(id, dto, solicitante);
     }
 }
