@@ -23,6 +23,12 @@ public class AuthController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    /** Comprobacion de disponibilidad (publica): permite al frontend saber si el servidor responde. */
+    @GetMapping("/ping")
+    public java.util.Map<String, String> ping() {
+        return java.util.Map.of("status", "ok");
+    }
+
     @PostMapping("/login")
     public AuthResponseDTO login(@RequestBody LoginDTO loginDTO) {
 
