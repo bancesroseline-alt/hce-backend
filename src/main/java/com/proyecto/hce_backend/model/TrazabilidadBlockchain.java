@@ -60,6 +60,10 @@ public class TrazabilidadBlockchain {
 
     private String modoLedger;
 
+    /** Foto de los datos clinicos en el momento del registro (JSON); permite mostrar que cambio entre versiones. */
+    @Column(columnDefinition = "text")
+    private String datosClinicos;
+
     @Column(length = 1000)
     private String errorFabric;
 }

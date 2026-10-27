@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -29,4 +30,6 @@ public class LedgerBloqueDTO {
     private String hashBloqueAnterior;
     private String hashBloque;
     private Boolean bloqueValido;
+    /** null = no hay detalle de cambios para esta version. */
+    private List<CambioCampoDTO> cambios;
 }

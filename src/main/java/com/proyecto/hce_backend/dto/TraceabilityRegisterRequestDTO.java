@@ -15,4 +15,5 @@ public class TraceabilityRegisterRequestDTO {
     private LocalDateTime timestamp;
     private String status;
     private String operationId;
+    private String datosClinicos;
 }

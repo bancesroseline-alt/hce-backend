@@ -10,6 +10,8 @@ public interface TrazabilidadBlockchainRepository extends JpaRepository<Trazabil
 
     List<TrazabilidadBlockchain> findByAtencionId(Long atencionId);
 
+    Optional<TrazabilidadBlockchain> findFirstByOperationId(String operationId);
+
     List<TrazabilidadBlockchain> findAllByOrderByFechaRegistroDesc();
 
     List<TrazabilidadBlockchain> findByEntityTypeAndEntityIdOrderByFechaRegistroDesc(String entityType, String entityId);

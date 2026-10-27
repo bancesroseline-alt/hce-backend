@@ -1,5 +1,6 @@
 package com.proyecto.hce_backend.service;
 
+import com.proyecto.hce_backend.dto.CambioCampoDTO;
 import com.proyecto.hce_backend.dto.CampoResumenDTO;
 import com.proyecto.hce_backend.dto.LedgerBloqueDTO;
 import com.proyecto.hce_backend.dto.TraceabilityVerifyRequestDTO;
@@ -106,7 +107,7 @@ class LedgerServiceIntegrationTest {
         assertEquals(b1.getNumeroBloque(), ledgerService.primerBloqueInvalido().orElseThrow());
         assertFalse(ledgerService.estado().getCadenaIntegra());
 
-        List<LedgerBloqueDTO> historial = traceabilityService.historialLedger("PACIENTE", "1");
+        List<LedgerBloqueDTO> historial = traceabilityService.historialLedger("PACIENTE", "1", false);
         assertFalse(historial.get(0).getBloqueValido());
     }
 
@@ -176,6 +177,66 @@ class LedgerServiceIntegrationTest {
         assertTrue(medico.stream().anyMatch(c -> c.getEtiqueta().equals("Estado") && c.getValor().equals("Activo")));
 
         assertTrue(traceabilityService.resumenRegistro("PACIENTE", id, true).isEmpty());
+    }
+
+    @Test
+    void elHistorialMuestraQueCambioEntreVersionesSoloAlPersonalDeSalud() {
+        Paciente paciente = new Paciente();
+        paciente.setTipoDocumento(TipoDocumento.DNI);
+        paciente.setNumeroDocumento("11223344");
+        paciente.setNombres("Sara");
+        paciente.setApellidos("Mora");
+        paciente.setFechaNacimiento(LocalDate.of(1992, 3, 4));
+        paciente.setSexo("F");
+        paciente.setEstadoCivil(EstadoCivil.SOLTERO);
+        paciente.setTelefono("999111222");
+        paciente.setEstado(true);
+        paciente = pacienteRepository.save(paciente);
+        String id = String.valueOf(paciente.getId());
+
+        traceabilityService.registrarEntidad("PACIENTE", "CREAR", paciente, null);
+
+        paciente.setTelefono("988777666");
+        paciente.setDireccion("Av. Central 45");
+        paciente = pacienteRepository.save(paciente);
+        traceabilityService.registrarEntidad("PACIENTE", "ACTUALIZAR", paciente, null);
+
+        List<LedgerBloqueDTO> medico = traceabilityService.historialLedger("PACIENTE", id, false);
+        assertEquals(2, medico.size());
+        assertNull(medico.get(0).getCambios());
+
+        List<CambioCampoDTO> cambios = medico.get(1).getCambios();
+        assertNotNull(cambios);
+        assertTrue(cambios.stream().anyMatch(c -> c.getEtiqueta().equals("Telefono")
+                && "999111222".equals(c.getAntes()) && "988777666".equals(c.getDespues())));
+        assertTrue(cambios.stream().anyMatch(c -> c.getEtiqueta().equals("Direccion")
+                && c.getAntes() == null && "Av. Central 45".equals(c.getDespues())));
+
+        // El administrador no recibe el detalle de los datos clinicos.
+        assertNull(traceabilityService.historialLedger("PACIENTE", id, true).get(1).getCambios());
+    }
+
+    @Test
+    void laListaDeRegistrosCuentaLasEvidenciasSinUnaConsultaPorFila() {
+        Paciente paciente = new Paciente();
+        paciente.setTipoDocumento(TipoDocumento.DNI);
+        paciente.setNumeroDocumento("55667788");
+        paciente.setNombres("Ivan");
+        paciente.setApellidos("Soto");
+        paciente.setFechaNacimiento(LocalDate.of(1980, 7, 7));
+        paciente.setSexo("M");
+        paciente.setEstadoCivil(EstadoCivil.CASADO);
+        paciente.setEstado(true);
+        paciente = pacienteRepository.save(paciente);
+
+        traceabilityService.registrarEntidad("PACIENTE", "CREAR", paciente, null);
+        traceabilityService.registrarEntidad("PACIENTE", "ACTUALIZAR", paciente, null);
+
+        var registros = traceabilityService.listarRegistros("PACIENTE", "", false);
+        assertEquals(1, registros.size());
+        assertEquals(2, registros.get(0).getEvidencias());
+
+        assertEquals(2L, ledgerService.contarEvidenciasPorEntidad("PACIENTE").get(String.valueOf(paciente.getId())));
     }
 
     private TraceabilityVerifyResponseDTO verificar(String tipo, String id) {

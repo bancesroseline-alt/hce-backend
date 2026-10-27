@@ -1,5 +1,8 @@
 package com.proyecto.hce_backend.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.proyecto.hce_backend.dto.CambioCampoDTO;
 import com.proyecto.hce_backend.dto.CampoResumenDTO;
 import com.proyecto.hce_backend.dto.FabricTraceResultDTO;
 import com.proyecto.hce_backend.dto.LedgerBloqueDTO;
@@ -19,11 +22,16 @@ import com.proyecto.hce_backend.repository.CitaRepository;
 import com.proyecto.hce_backend.repository.PacienteRepository;
 import com.proyecto.hce_backend.repository.TrazabilidadBlockchainRepository;
 import com.proyecto.hce_backend.repository.UsuarioRepository;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -34,6 +42,7 @@ import java.util.UUID;
 public class BlockchainTraceabilityService {
 
     private static final int MAX_REGISTROS_SELECTOR = 100;
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final TrazabilidadBlockchainRepository trazabilidadRepository;
     private final AtencionMedicaRepository atencionMedicaRepository;
@@ -100,6 +109,7 @@ public class BlockchainTraceabilityService {
         trazabilidad.setFechaRegistro(request.getTimestamp() != null ? request.getTimestamp() : LocalDateTime.now());
         trazabilidad.setIntegridadValida(true);
         trazabilidad.setOperationId(request.getOperationId());
+        trazabilidad.setDatosClinicos(request.getDatosClinicos());
 
         if ("ATENCION".equals(tipoEntidad) || "HISTORIA_CLINICA".equals(tipoEntidad)) {
             trazabilidad.setAtencionId(parseLong(request.getEntityId()));
@@ -138,6 +148,7 @@ public class BlockchainTraceabilityService {
         request.setTimestamp(LocalDateTime.now());
         request.setStatus("REGISTRADO");
         request.setOperationId(UUID.randomUUID().toString());
+        request.setDatosClinicos(serializar(camposDe(entity)));
 
         return registrar(request);
     }
@@ -197,13 +208,15 @@ public class BlockchainTraceabilityService {
         return respuesta;
     }
 
-    /** getHistory(): evidencias de una entidad con la validez de cada bloque del ledger. */
-    public List<LedgerBloqueDTO> historialLedger(String entityType, String entityId) {
+    /** getHistory(): evidencias de una entidad con la validez de cada bloque y, para personal de salud, que cambio. */
+    public List<LedgerBloqueDTO> historialLedger(String entityType, String entityId, boolean esAdmin) {
         String tipoEntidad = hashService.normalizarTipoEntidad(entityType);
-        Map<Long, Boolean> validez = ledgerService.validezPorBloque();
+        List<LedgerBloque> bloques = ledgerService.getHistory(tipoEntidad, entityId);
+        Map<Long, Boolean> validez = ledgerService.validezDeBloques(bloques);
         List<LedgerBloqueDTO> resultado = new ArrayList<>();
+        List<CampoResumenDTO> anterior = null;
 
-        for (LedgerBloque bloque : ledgerService.getHistory(tipoEntidad, entityId)) {
+        for (LedgerBloque bloque : bloques) {
             LedgerBloqueDTO dto = new LedgerBloqueDTO();
             dto.setNumeroBloque(bloque.getNumeroBloque());
             dto.setTxId(bloque.getTxId());
@@ -223,10 +236,70 @@ public class BlockchainTraceabilityService {
             dto.setHashBloqueAnterior(bloque.getHashBloqueAnterior());
             dto.setHashBloque(bloque.getHashBloque());
             dto.setBloqueValido(validez.getOrDefault(bloque.getNumeroBloque(), false));
+
+            if (!esAdmin) {
+                List<CampoResumenDTO> actual = datosDeBloque(bloque);
+
+                if (actual != null && anterior != null) {
+                    dto.setCambios(diferencias(anterior, actual));
+                }
+
+                anterior = actual;
+            }
+
             resultado.add(dto);
         }
 
         return resultado;
+    }
+
+    private List<CampoResumenDTO> datosDeBloque(LedgerBloque bloque) {
+        return trazabilidadRepository.findFirstByOperationId(bloque.getOperationId())
+                .map(TrazabilidadBlockchain::getDatosClinicos)
+                .map(this::deserializar)
+                .orElse(null);
+    }
+
+    private List<CambioCampoDTO> diferencias(List<CampoResumenDTO> antes, List<CampoResumenDTO> despues) {
+        Map<String, String> a = comoMapa(antes);
+        Map<String, String> d = comoMapa(despues);
+        LinkedHashSet<String> etiquetas = new LinkedHashSet<>(d.keySet());
+        etiquetas.addAll(a.keySet());
+        List<CambioCampoDTO> cambios = new ArrayList<>();
+
+        for (String etiqueta : etiquetas) {
+            if (!Objects.equals(a.get(etiqueta), d.get(etiqueta))) {
+                cambios.add(new CambioCampoDTO(etiqueta, a.get(etiqueta), d.get(etiqueta)));
+            }
+        }
+
+        return cambios;
+    }
+
+    private Map<String, String> comoMapa(List<CampoResumenDTO> campos) {
+        Map<String, String> mapa = new LinkedHashMap<>();
+
+        for (CampoResumenDTO campo : campos) {
+            mapa.put(campo.getEtiqueta(), campo.getValor());
+        }
+
+        return mapa;
+    }
+
+    private String serializar(List<CampoResumenDTO> campos) {
+        try {
+            return MAPPER.writeValueAsString(campos);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private List<CampoResumenDTO> deserializar(String json) {
+        try {
+            return json == null ? null : MAPPER.readValue(json, new TypeReference<List<CampoResumenDTO>>() { });
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public LedgerEstadoDTO estadoLedger() {
@@ -241,10 +314,15 @@ public class BlockchainTraceabilityService {
         String tipoEntidad = hashService.normalizarTipoEntidad(entityType);
         String criterio = filtro == null ? "" : filtro.trim().toLowerCase(Locale.ROOT);
         List<TraceRecordDTO> registros = new ArrayList<>();
+        String tipoLedger = "HISTORIA_CLINICA".equals(tipoEntidad) ? "ATENCION" : tipoEntidad;
+        Map<String, Long> conteos = ledgerService.contarEvidenciasPorEntidad(tipoLedger);
+        PageRequest recientes = PageRequest.of(0, MAX_REGISTROS_SELECTOR, Sort.by(Sort.Direction.DESC, "id"));
+        boolean sinFiltro = criterio.isEmpty();
 
         if ("ATENCION".equals(tipoEntidad) || "HISTORIA_CLINICA".equals(tipoEntidad)) {
-            for (AtencionMedica a : atencionMedicaRepository.findAll()) {
+            for (AtencionMedica a : sinFiltro ? atencionMedicaRepository.findAll(recientes).getContent() : atencionMedicaRepository.findAll()) {
                 registros.add(registro(
+                        conteos,
                         "ATENCION",
                         a.getId(),
                         "Atencion #" + a.getId(),
@@ -254,8 +332,9 @@ public class BlockchainTraceabilityService {
                 ));
             }
         } else if ("PACIENTE".equals(tipoEntidad)) {
-            for (Paciente p : pacienteRepository.findAll()) {
+            for (Paciente p : sinFiltro ? pacienteRepository.findAll(recientes).getContent() : pacienteRepository.findAll()) {
                 registros.add(registro(
+                        conteos,
                         "PACIENTE",
                         p.getId(),
                         "Paciente #" + p.getId(),
@@ -264,12 +343,13 @@ public class BlockchainTraceabilityService {
                 ));
             }
         } else if ("CITA".equals(tipoEntidad)) {
-            for (Cita c : citaRepository.findAll()) {
+            for (Cita c : sinFiltro ? citaRepository.findAll(recientes).getContent() : citaRepository.findAll()) {
                 LocalDateTime fecha = c.getFecha() != null
                         ? (c.getHora() != null ? c.getFecha().atTime(c.getHora()) : c.getFecha().atStartOfDay())
                         : null;
 
                 registros.add(registro(
+                        conteos,
                         "CITA",
                         c.getId(),
                         "Cita #" + c.getId(),
@@ -301,7 +381,11 @@ public class BlockchainTraceabilityService {
         }
 
         String tipoEntidad = hashService.normalizarTipoEntidad(entityType);
-        Object entidad = obtenerEntidadActual(tipoEntidad, entityId);
+        return camposDe(obtenerEntidadActual(tipoEntidad, entityId));
+    }
+
+    /** Campos clinicos legibles de una entidad (para mostrarlos y para guardar su foto en cada version). */
+    private List<CampoResumenDTO> camposDe(Object entidad) {
         List<CampoResumenDTO> campos = new ArrayList<>();
 
         if (entidad instanceof AtencionMedica a) {
@@ -342,6 +426,7 @@ public class BlockchainTraceabilityService {
             agregar(campos, "Medico", nombreUsuario(c.getMedico()));
         }
 
+
         return campos;
     }
 
@@ -350,11 +435,27 @@ public class BlockchainTraceabilityService {
             return;
         }
 
-        String texto = valor.toString().trim();
+        String texto = formatear(valor).trim();
 
         if (!texto.isEmpty()) {
             campos.add(new CampoResumenDTO(etiqueta, texto));
         }
+    }
+
+    private String formatear(Object valor) {
+        if (valor instanceof LocalDateTime fechaHora) {
+            return fechaHora.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        }
+
+        if (valor instanceof java.time.LocalDate fecha) {
+            return fecha.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        }
+
+        if (valor instanceof java.time.LocalTime hora) {
+            return hora.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+        }
+
+        return valor.toString();
     }
 
     private String nombrePaciente(Paciente paciente) {
@@ -375,9 +476,9 @@ public class BlockchainTraceabilityService {
                 + (usuario.getApellidos() == null ? "" : usuario.getApellidos())).trim();
     }
 
-    private TraceRecordDTO registro(String tipo, Long id, String titulo, String detalle, LocalDateTime fecha) {
+    private TraceRecordDTO registro(Map<String, Long> conteos, String tipo, Long id, String titulo, String detalle, LocalDateTime fecha) {
         String idTexto = String.valueOf(id);
-        return new TraceRecordDTO(tipo, idTexto, titulo, detalle, fecha, ledgerService.contarEvidencias(tipo, idTexto));
+        return new TraceRecordDTO(tipo, idTexto, titulo, detalle, fecha, conteos.getOrDefault(idTexto, 0L));
     }
 
     private String descripcionPaciente(Paciente paciente, boolean ocultar) {

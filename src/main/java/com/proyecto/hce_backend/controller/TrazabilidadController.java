@@ -66,8 +66,9 @@ public class TrazabilidadController {
 
     @GetMapping("/ledger/{tipoEntidad}/{idRegistro}")
     public List<LedgerBloqueDTO> historialLedger(@PathVariable String tipoEntidad,
-                                                 @PathVariable String idRegistro) {
-        return traceabilityService.historialLedger(tipoEntidad, idRegistro);
+                                                 @PathVariable String idRegistro,
+                                                 Authentication authentication) {
+        return traceabilityService.historialLedger(tipoEntidad, idRegistro, esAdmin(authentication));
     }
 
     @GetMapping("/atencion/{id}")

@@ -79,6 +79,38 @@ public class LedgerService {
         return ledgerRepository.countByEntityTypeAndEntityId(entityType, entityId);
     }
 
+    /** Evidencias por registro de un tipo, en una sola consulta. */
+    public Map<String, Long> contarEvidenciasPorEntidad(String entityType) {
+        Map<String, Long> conteos = new java.util.HashMap<>();
+
+        for (Object[] fila : ledgerRepository.contarPorEntidad(entityType)) {
+            conteos.put(String.valueOf(fila[0]), ((Number) fila[1]).longValue());
+        }
+
+        return conteos;
+    }
+
+    /**
+     * Validez de unos bloques concretos (su propio hash y su enlace con el bloque anterior),
+     * sin recorrer toda la cadena: barato para mostrar el historial de un registro.
+     */
+    public Map<Long, Boolean> validezDeBloques(List<LedgerBloque> bloques) {
+        Map<Long, Boolean> resultado = new LinkedHashMap<>();
+
+        for (LedgerBloque bloque : bloques) {
+            String hashAnteriorEsperado = ledgerRepository
+                    .findTopByNumeroBloqueLessThanOrderByNumeroBloqueDesc(bloque.getNumeroBloque())
+                    .map(LedgerBloque::getHashBloque)
+                    .orElse(GENESIS);
+
+            boolean enlaceValido = hashAnteriorEsperado.equals(bloque.getHashBloqueAnterior());
+            boolean hashValido = calcularHashBloque(bloque).equals(bloque.getHashBloque());
+            resultado.put(bloque.getNumeroBloque(), enlaceValido && hashValido);
+        }
+
+        return resultado;
+    }
+
     /** Recalcula toda la cadena. Clave: numero de bloque; valor: si el bloque y su enlace son consistentes. */
     public Map<Long, Boolean> validezPorBloque() {
         Map<Long, Boolean> resultado = new LinkedHashMap<>();
