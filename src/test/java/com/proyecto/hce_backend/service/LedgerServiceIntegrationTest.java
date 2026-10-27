@@ -1,5 +1,6 @@
 package com.proyecto.hce_backend.service;
 
+import com.proyecto.hce_backend.dto.CampoResumenDTO;
 import com.proyecto.hce_backend.dto.LedgerBloqueDTO;
 import com.proyecto.hce_backend.dto.TraceabilityVerifyRequestDTO;
 import com.proyecto.hce_backend.dto.TraceabilityVerifyResponseDTO;
@@ -154,6 +155,27 @@ class LedgerServiceIntegrationTest {
         primero.setAction("MANIPULADO");
         ledgerRepository.save(primero);
         assertEquals("LEDGER_ALTERADO", verificar("PACIENTE", id).getEstado());
+    }
+
+    @Test
+    void elResumenClinicoSoloLoRecibeElPersonalDeSalud() {
+        Paciente paciente = new Paciente();
+        paciente.setTipoDocumento(TipoDocumento.DNI);
+        paciente.setNumeroDocumento("87654321");
+        paciente.setNombres("Marco");
+        paciente.setApellidos("Rios");
+        paciente.setFechaNacimiento(LocalDate.of(1985, 1, 10));
+        paciente.setSexo("M");
+        paciente.setEstadoCivil(EstadoCivil.CASADO);
+        paciente.setEstado(true);
+        paciente = pacienteRepository.save(paciente);
+        String id = String.valueOf(paciente.getId());
+
+        List<CampoResumenDTO> medico = traceabilityService.resumenRegistro("PACIENTE", id, false);
+        assertTrue(medico.stream().anyMatch(c -> c.getEtiqueta().equals("Nombre") && c.getValor().equals("Marco Rios")));
+        assertTrue(medico.stream().anyMatch(c -> c.getEtiqueta().equals("Estado") && c.getValor().equals("Activo")));
+
+        assertTrue(traceabilityService.resumenRegistro("PACIENTE", id, true).isEmpty());
     }
 
     private TraceabilityVerifyResponseDTO verificar(String tipo, String id) {

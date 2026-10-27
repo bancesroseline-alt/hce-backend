@@ -1,5 +1,6 @@
 package com.proyecto.hce_backend.controller;
 
+import com.proyecto.hce_backend.dto.CampoResumenDTO;
 import com.proyecto.hce_backend.dto.LedgerBloqueDTO;
 import com.proyecto.hce_backend.dto.LedgerEstadoDTO;
 import com.proyecto.hce_backend.dto.TraceRecordDTO;
@@ -47,10 +48,15 @@ public class TrazabilidadController {
     public List<TraceRecordDTO> registros(@RequestParam(defaultValue = "ATENCION") String tipo,
                                           @RequestParam(required = false) String q,
                                           Authentication authentication) {
-        boolean esAdmin = authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(autoridad -> "ROLE_ADMIN".equals(autoridad.getAuthority()));
+        return traceabilityService.listarRegistros(tipo, q, esAdmin(authentication));
+    }
 
-        return traceabilityService.listarRegistros(tipo, q, esAdmin);
+    /** Datos clinicos del registro (solo personal de salud; el administrador recibe una lista vacia). */
+    @GetMapping("/resumen/{tipoEntidad}/{idRegistro}")
+    public List<CampoResumenDTO> resumen(@PathVariable String tipoEntidad,
+                                         @PathVariable String idRegistro,
+                                         Authentication authentication) {
+        return traceabilityService.resumenRegistro(tipoEntidad, idRegistro, esAdmin(authentication));
     }
 
     @GetMapping("/ledger/estado")
@@ -82,5 +88,10 @@ public class TrazabilidadController {
     public List<TrazabilidadBlockchain> historialPorEntidad(@PathVariable String tipoEntidad,
                                                             @PathVariable String idRegistro) {
         return traceabilityService.consultar(tipoEntidad, idRegistro);
+    }
+
+    private boolean esAdmin(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(autoridad -> "ROLE_ADMIN".equals(autoridad.getAuthority()));
     }
 }

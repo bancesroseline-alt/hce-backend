@@ -1,5 +1,6 @@
 package com.proyecto.hce_backend.service;
 
+import com.proyecto.hce_backend.dto.CampoResumenDTO;
 import com.proyecto.hce_backend.dto.FabricTraceResultDTO;
 import com.proyecto.hce_backend.dto.LedgerBloqueDTO;
 import com.proyecto.hce_backend.dto.LedgerEstadoDTO;
@@ -288,6 +289,90 @@ public class BlockchainTraceabilityService {
                         Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(MAX_REGISTROS_SELECTOR)
                 .toList();
+    }
+
+    /**
+     * Datos clinicos del registro para que el personal de salud pueda contrastar la evidencia con la informacion
+     * medica. El administrador no recibe datos clinicos (lista vacia).
+     */
+    public List<CampoResumenDTO> resumenRegistro(String entityType, String entityId, boolean esAdmin) {
+        if (esAdmin) {
+            return new ArrayList<>();
+        }
+
+        String tipoEntidad = hashService.normalizarTipoEntidad(entityType);
+        Object entidad = obtenerEntidadActual(tipoEntidad, entityId);
+        List<CampoResumenDTO> campos = new ArrayList<>();
+
+        if (entidad instanceof AtencionMedica a) {
+            agregar(campos, "Paciente", nombrePaciente(a.getPaciente()));
+            agregar(campos, "Fecha y hora", a.getFechaHora());
+            agregar(campos, "Tipo de atencion", a.getTipoAtencion());
+            agregar(campos, "Motivo de consulta", a.getMotivoConsulta());
+            agregar(campos, "Diagnostico", a.getDiagnostico());
+            agregar(campos, "Tratamiento indicado", a.getTratamientoIndicado());
+            agregar(campos, "Medicamentos", a.getMedicamentos());
+            agregar(campos, "Observaciones", a.getObservaciones());
+            agregar(campos, "Presion arterial", a.getPresionArterial());
+            agregar(campos, "Temperatura", a.getTemperatura() != null ? a.getTemperatura() + " °C" : null);
+            agregar(campos, "Saturacion", a.getSaturacion() != null ? a.getSaturacion() + " %" : null);
+            agregar(campos, "Peso", a.getPeso() != null ? a.getPeso() + " kg" : null);
+            agregar(campos, "Talla", a.getTalla() != null ? a.getTalla() + " cm" : null);
+            agregar(campos, "Estado", a.getEstado());
+            agregar(campos, "Profesional", nombreUsuario(a.getUsuario()));
+        } else if (entidad instanceof Paciente p) {
+            agregar(campos, "Nombre", nombrePaciente(p));
+            agregar(campos, "Documento", p.getTipoDocumento() + " " + p.getNumeroDocumento());
+            agregar(campos, "Fecha de nacimiento", p.getFechaNacimiento());
+            agregar(campos, "Sexo", p.getSexo());
+            agregar(campos, "Estado civil", p.getEstadoCivil());
+            agregar(campos, "Telefono", p.getTelefono());
+            agregar(campos, "Direccion", p.getDireccion());
+            agregar(campos, "Grupo sanguineo", p.getGrupoSanguineo());
+            agregar(campos, "Antecedentes", p.getAntecedentes());
+            agregar(campos, "Estado", Boolean.TRUE.equals(p.getEstado()) ? "Activo" : "Inactivo");
+        } else if (entidad instanceof Cita c) {
+            agregar(campos, "Paciente", nombrePaciente(c.getPaciente()));
+            agregar(campos, "Fecha", c.getFecha());
+            agregar(campos, "Hora", c.getHora());
+            agregar(campos, "Tipo de cita", c.getTipoCita());
+            agregar(campos, "Especialidad", c.getEspecialidad());
+            agregar(campos, "Motivo", c.getMotivoConsulta());
+            agregar(campos, "Estado", c.getEstado());
+            agregar(campos, "Medico", nombreUsuario(c.getMedico()));
+        }
+
+        return campos;
+    }
+
+    private void agregar(List<CampoResumenDTO> campos, String etiqueta, Object valor) {
+        if (valor == null) {
+            return;
+        }
+
+        String texto = valor.toString().trim();
+
+        if (!texto.isEmpty()) {
+            campos.add(new CampoResumenDTO(etiqueta, texto));
+        }
+    }
+
+    private String nombrePaciente(Paciente paciente) {
+        if (paciente == null) {
+            return null;
+        }
+
+        return ((paciente.getNombres() == null ? "" : paciente.getNombres()) + " "
+                + (paciente.getApellidos() == null ? "" : paciente.getApellidos())).trim();
+    }
+
+    private String nombreUsuario(Usuario usuario) {
+        if (usuario == null) {
+            return null;
+        }
+
+        return ((usuario.getNombres() == null ? "" : usuario.getNombres()) + " "
+                + (usuario.getApellidos() == null ? "" : usuario.getApellidos())).trim();
     }
 
     private TraceRecordDTO registro(String tipo, Long id, String titulo, String detalle, LocalDateTime fecha) {
